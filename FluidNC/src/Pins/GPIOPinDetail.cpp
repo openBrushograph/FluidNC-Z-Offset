@@ -83,7 +83,7 @@ namespace Pins {
     }
 
     GPIOPinDetail::GPIOPinDetail(pinnum_t index, PinOptionsParser options) :
-        PinDetail(index), _capabilities(GetDefaultCapabilities(index)), _attributes(Pins::PinAttributes::Undefined) {
+        PinDetail(index), _capabilities(GetDefaultCapabilities(index)), _attributes(Pins::PinAttributes::Undefined), _readWriteMask(0) {
         // NOTE:
         //
         // RAII is very important here! If we throw an exception in the constructor, the resources
@@ -121,7 +121,7 @@ namespace Pins {
         _claimed[index] = true;
 
         // readWriteMask is xor'ed with the value to invert it if active low
-        _inverted = _attributes.has(PinAttributes::ActiveLow);
+        _readWriteMask = int(_attributes.has(PinAttributes::ActiveLow));
     }
 
     PinAttributes GPIOPinDetail::getAttr() const {
@@ -139,13 +139,13 @@ namespace Pins {
                 log_error(toString());
             }
             Assert(_attributes.has(PinAttributes::Output), "Pin %s cannot be written", toString().c_str());
-            int value = _inverted ^ (bool)high;
+            int value = _readWriteMask ^ high;
             gpio_write(_index, value);
         }
     }
     int IRAM_ATTR GPIOPinDetail::read() {
         auto raw = gpio_read(_index);
-        return (bool)raw ^ _inverted;
+        return raw ^ _readWriteMask;
     }
 
     void GPIOPinDetail::setAttr(PinAttributes value) {
@@ -165,7 +165,7 @@ namespace Pins {
 
         // If the pin is ActiveLow, we should take that into account here:
         if (value.has(PinAttributes::Output)) {
-            gpio_write(_index, int(value.has(PinAttributes::InitialOn)) ^ _inverted);
+            gpio_write(_index, int(value.has(PinAttributes::InitialOn)) ^ _readWriteMask);
         }
 
         gpio_mode(_index,
@@ -178,7 +178,7 @@ namespace Pins {
 
     // This is a callback from the low-level GPIO driver that is invoked after
     // registerEvent() has been called and the pin becomes active.
-    void GPIOPinDetail::gpioAction(int gpio_num, void* arg, int active) {
+    void GPIOPinDetail::gpioAction(int gpio_num, void* arg, bool active) {
         EventPin* obj = static_cast<EventPin*>(arg);
         obj->trigger(active);
     }

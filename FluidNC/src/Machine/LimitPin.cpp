@@ -6,8 +6,9 @@
 #include "src/Protocol.h"  // protocol_send_event_from_ISR()
 
 namespace Machine {
-    LimitPin::LimitPin(Pin& pin, int axis, int motor, int direction, bool& pHardLimits) :
-        EventPin(&limitEvent, "Limit"), _axis(axis), _motorNum(motor), _value(false), _pHardLimits(pHardLimits), _pin(&pin) {
+    LimitPin::LimitPin(Pin& pin, int axis, int motor, int direction, bool& pHardLimits, bool& pLimited) :
+        EventPin(&limitEvent, "Limit"), _axis(axis), _motorNum(motor), _value(false), _pHardLimits(pHardLimits), _pLimited(pLimited),
+        _pin(&pin) {
         const char* sDir;
         // Select one or two bitmask variables to receive the switch data
         switch (direction) {
@@ -36,7 +37,7 @@ namespace Machine {
         // Set a bitmap with bits to represent the axis and which motors are affected
         // The bitmap looks like CBAZYX..cbazyx where motor0 motors are in the lower bits
         _bitmask = 1 << Axes::motor_bit(axis, motor);
-        _legend  = Axes::motorMaskToNames(_bitmask);
+        _legend  = config->_axes->motorMaskToNames(_bitmask);
         _legend += " ";
         _legend += sDir;
         _legend += " Limit";
@@ -46,8 +47,6 @@ namespace Machine {
         if (_pin->undefined()) {
             return;
         }
-        _pLimited = Stepping::limit_var(_axis, _motorNum);
-
         _pin->report(_legend);
         _pin->setAttr(Pin::Attr::Input);
         _pin->registerEvent(static_cast<EventPin*>(this));
@@ -57,9 +56,8 @@ namespace Machine {
     void LimitPin::update(bool value) {
         if (value) {
             if (Homing::approach() || (!state_is(State::Homing) && _pHardLimits)) {
-                if (_pLimited != nullptr) {
-                    *_pLimited = value;
-                }
+                _pLimited = value;
+
                 if (_pExtraLimited != nullptr) {
                     *_pExtraLimited = value;
                 }
@@ -72,9 +70,8 @@ namespace Machine {
                 set_bits(*_negLimits, _bitmask);
             }
         } else {
-            if (_pLimited != nullptr) {
-                *_pLimited = value;
-            }
+            _pLimited = value;
+
             if (_pExtraLimited != nullptr) {
                 *_pExtraLimited = value;
             }
@@ -90,11 +87,7 @@ namespace Machine {
     // Make this switch act like an axis level switch. Both motors will report the same
     // This should be called from a higher level object, that has the logic to figure out
     // if this belongs to a dual motor, single switch axis
-    void LimitPin::makeDualMask() {
-        _bitmask = Axes::axes_to_motors(Axes::motors_to_axes(_bitmask));
-    }
+    void LimitPin::makeDualMask() { _bitmask = Axes::axes_to_motors(Axes::motors_to_axes(_bitmask)); }
 
-    void LimitPin::setExtraMotorLimit(int axis, int motorNum) {
-        _pExtraLimited = Stepping::limit_var(axis, motorNum);
-    }
+    void LimitPin::setExtraMotorLimit(int axis, int motorNum) { _pExtraLimited = &config->_axes->_axis[axis]->_motors[motorNum]->_limited; }
 }

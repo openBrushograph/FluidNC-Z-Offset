@@ -31,26 +31,26 @@ namespace Machine {
 
         static bool disabled;
 
-        static Pin _sharedStepperDisable;
-        static Pin _sharedStepperReset;
+        Pin _sharedStepperDisable;
+        Pin _sharedStepperReset;
 
-        static uint32_t _homing_runs;  // Number of Approach/Pulloff cycles
+        uint32_t _homing_runs = 2;  // Number of Approach/Pulloff cycles
 
-        static inline char axisName(int index) { return index < MAX_N_AXIS ? _names[index] : '?'; }  // returns axis letter
+        inline char axisName(int index) { return index < MAX_N_AXIS ? _names[index] : '?'; }  // returns axis letter
 
         static inline size_t    motor_bit(size_t axis, size_t motor) { return motor ? axis + 16 : axis; }
         static inline AxisMask  motors_to_axes(MotorMask motors) { return (motors & 0xffff) | (motors >> 16); }
         static inline MotorMask axes_to_motors(AxisMask axes) { return axes | (axes << 16); }
 
-        static int   _numberAxis;
-        static Axis* _axis[MAX_N_AXIS];
+        int   _numberAxis = 0;
+        Axis* _axis[MAX_N_AXIS];
 
         // Some small helpers to find the axis index and axis motor number for a given motor. This
         // is helpful for some motors that need this info, as well as debug information.
-        static size_t findAxisIndex(const MotorDrivers::MotorDriver* const motor);
-        static size_t findAxisMotor(const MotorDrivers::MotorDriver* const motor);
+        size_t findAxisIndex(const MotorDrivers::MotorDriver* const motor) const;
+        size_t findAxisMotor(const MotorDrivers::MotorDriver* const motor) const;
 
-        static MotorMask hardLimitMask();
+        MotorMask hardLimitMask();
 
         inline bool hasHardLimits() const {
             for (int axis = 0; axis < _numberAxis; ++axis) {
@@ -66,23 +66,23 @@ namespace Machine {
             return false;
         }
 
-        static void init();
+        void init();
 
         // These are used during homing cycles.
         // The return value is a bitmask of axes that can home
-        static MotorMask set_homing_mode(AxisMask homing_mask, bool isHoming);
+        MotorMask set_homing_mode(AxisMask homing_mask, bool isHoming);
 
-        static void set_disable(int axis, bool disable);
-        static void set_disable(bool disable);
-        static void step(uint8_t step_mask, uint8_t dir_mask);
-        static void unstep();
-        static void config_motors();
+        void set_disable(int axis, bool disable);
+        void set_disable(bool disable);
+        void step(uint8_t step_mask, uint8_t dir_mask);
+        void unstep();
+        void config_motors();
 
-        static std::string maskToNames(AxisMask mask);
+        std::string maskToNames(AxisMask mask);
 
-        static bool namesToMask(const char* names, AxisMask& mask);
+        bool namesToMask(const char* names, AxisMask& mask);
 
-        static std::string motorMaskToNames(MotorMask mask);
+        std::string motorMaskToNames(MotorMask mask);
 
         // Configuration helpers:
         void group(Configuration::HandlerBase& handler) override;

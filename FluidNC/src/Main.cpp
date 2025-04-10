@@ -90,7 +90,7 @@ void setup() {
             }
         }
 
-        Stepping::init();  // Configure stepper interrupt timers
+        config->_stepping->init();  // Configure stepper interrupt timers
 
         plan_init();
 
@@ -98,7 +98,7 @@ void setup() {
 
         config->_userInputs->init();
 
-        Axes::init();
+        config->_axes->init();
 
         config->_control->init();
 
@@ -124,8 +124,8 @@ void setup() {
             for (auto const& spindle : spindles) {
                 spindle->init();
             }
-            bool stopped_spindle, new_spindle; 
-            Spindles::Spindle::switchSpindle(0, spindles, spindle, stopped_spindle, new_spindle);
+            bool stopped_spindle;
+            Spindles::Spindle::switchSpindle(0, spindles, spindle, stopped_spindle);
 
             config->_coolant->init();
             config->_probe->init();

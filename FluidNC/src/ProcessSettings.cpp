@@ -20,7 +20,7 @@
 #include "UartChannel.h"          // Uart0.write()
 #include "FileStream.h"           // FileStream()
 #include "StartupLog.h"           // startupLog
-#include "Driver/gpio_dump.h"     // gpio_dump()
+#include "Driver/fluidnc_gpio.h"  // gpio_dump()
 #include "FileCommands.h"         // make_file_commands()
 
 #include "FluidPath.h"
@@ -34,11 +34,7 @@
 // WU Readable and writable as user and admin
 // WA Readable as user and admin, writable as admin
 
-static Error switchInchMM(const char* value, AuthenticationLevel auth_level, Channel& out);
-
 static Error fakeMaxSpindleSpeed(const char* value, AuthenticationLevel auth_level, Channel& out);
-
-static Error report_init_message_cmd(const char* value, AuthenticationLevel auth_level, Channel& out);
 
 // If authentication is disabled, auth_level will be LEVEL_ADMIN
 static bool auth_failed(Word* w, const char* value, AuthenticationLevel auth_level) {
@@ -197,13 +193,9 @@ static void show_settings(Channel& out, type_t type) {
             show_setting(s->getGrblName(), s->getCompatibleValue(), NULL, out);
         }
     }
-   // Print Report/Inches
-    switchInchMM(NULL, AuthenticationLevel::LEVEL_ADMIN, out);
-
     // need this per issue #1036
     fakeMaxSpindleSpeed(NULL, AuthenticationLevel::LEVEL_ADMIN, out);
 }
-
 static Error report_normal_settings(const char* value, AuthenticationLevel auth_level, Channel& out) {
     show_settings(out, GRBL);  // GRBL non-axis settings
     return Error::Ok;
@@ -297,7 +289,7 @@ static Error disable_alarm_lock(const char* value, AuthenticationLevel auth_leve
             return err;
         }
         Homing::set_all_axes_homed();
-        config->_kinematics->releaseMotors(Axes::motorMask, Axes::hardLimitMask());
+        config->_kinematics->releaseMotors(config->_axes->motorMask, config->_axes->hardLimitMask());
         report_feedback_message(Message::AlarmUnlock);
         set_state(State::Idle);
     }
@@ -385,16 +377,12 @@ static Error cmd_log_verbose(const char* value, AuthenticationLevel auth_level, 
     return Error::Ok;
 }
 static Error home(AxisMask axisMask, Channel& out) {
-    // see if blocking control switches are active
-    if (config->_control->pins_block_unlock()) {
-        return Error::CheckControlPins;
-    }
     if (axisMask != Machine::Homing::AllCycles) {  // if not AllCycles we need to make sure the cycle is not prohibited
         // if there is a cycle it is the axis from $H<axis>
-        auto n_axis = Axes::_numberAxis;
+        auto n_axis = config->_axes->_numberAxis;
         for (int axis = 0; axis < n_axis; axis++) {
             if (bitnum_is_true(axisMask, axis)) {
-                auto axisConfig     = Axes::_axis[axis];
+                auto axisConfig     = config->_axes->_axis[axis];
                 auto homing         = axisConfig->_homing;
                 auto homing_allowed = homing && homing->_allow_single_axis;
                 if (!homing_allowed)
@@ -461,7 +449,7 @@ static Error home_all(const char* value, AuthenticationLevel auth_level, Channel
                 return retval;
             }
         }
-        if (!Axes::namesToMask(value, requestedAxes)) {
+        if (!config->_axes->namesToMask(value, requestedAxes)) {
             return Error::InvalidValue;
         }
     }
@@ -648,7 +636,7 @@ static Error motor_control(const char* value, bool disable) {
     }
     if (!value || *value == '\0') {
         log_info((disable ? "Dis" : "En") << "abling all motors");
-        Axes::set_disable(disable);
+        config->_axes->set_disable(disable);
         return Error::Ok;
     }
 
@@ -659,7 +647,7 @@ static Error motor_control(const char* value, bool disable) {
         return Error::InvalidStatement;
     }
 
-    for (int i = 0; i < Axes::_numberAxis; i++) {
+    for (int i = 0; i < config->_axes->_numberAxis; i++) {
         char axisName = axes->axisName(i);
 
         if (strchr(value, axisName) || strchr(value, tolower(axisName))) {
@@ -678,7 +666,7 @@ static Error motor_enable(const char* value, AuthenticationLevel auth_level, Cha
 }
 
 static Error motors_init(const char* value, AuthenticationLevel auth_level, Channel& out) {
-    Axes::config_motors();
+    config->_axes->config_motors();
     return Error::Ok;
 }
 
@@ -714,22 +702,6 @@ static Error dump_config(const char* value, AuthenticationLevel auth_level, Chan
         drain_messages();
         delete ss;
     }
-    return Error::Ok;
-}
-
-static Error report_init_message_cmd(const char* value, AuthenticationLevel auth_level, Channel& out) {
-    report_init_message(out);
-
-    return Error::Ok;
-}
-
-static Error switchInchMM(const char* value, AuthenticationLevel auth_level, Channel& out) {
-    if (!value) {
-        log_stream(out, "$13=" << (config->_reportInches ? "1" : "0"));
-    } else {
-        config->_reportInches = ((value[0]=='1') ? true : false);
-    }
-
     return Error::Ok;
 }
 
@@ -865,11 +837,8 @@ void make_user_commands() {
 
     new UserCommand("RI", "Report/Interval", setReportInterval, anyState);
 
-    new UserCommand("13", "Report/Inches", switchInchMM, notIdleOrAlarm);
     new UserCommand("30", "FakeMaxSpindleSpeed", fakeMaxSpindleSpeed, notIdleOrAlarm);
     new UserCommand("32", "FakeLaserMode", fakeLaserMode, notIdleOrAlarm);
-
-    new UserCommand("GS", "GRBL/Show", report_init_message_cmd, notIdleOrAlarm);
 
     new AsyncUserCommand("J", "Jog", doJog, notIdleOrJog);
     new AsyncUserCommand("G", "GCode/Modes", report_gcode, anyState);
@@ -929,6 +898,8 @@ Error do_command_or_setting(const char* key, const char* value, AuthenticationLe
             return cp->action(value, auth_level, out);
         }
     }
+
+    protocol_buffer_synchronize();
 
     // First search the yaml settings by name. If found, set a new
     // value if one is given, otherwise display the current value
@@ -1059,10 +1030,6 @@ Error execute_line(char* line, Channel& channel, AuthenticationLevel auth_level)
     // Empty or comment line. For syncing purposes.
     if (line[0] == 0) {
         return Error::Ok;
-    }
-    // Skip leading whitespace
-    while (isspace(*line)) {
-        ++line;
     }
     // User '$' or WebUI '[ESPxxx]' command
     if (line[0] == '$' || line[0] == '[') {

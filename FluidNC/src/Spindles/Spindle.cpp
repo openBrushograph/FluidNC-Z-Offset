@@ -18,18 +18,13 @@ namespace Spindles {
         ATCs::ATC* candidate = nullptr;
         auto       atcs      = ATCs::ATCFactory::objects();
         for (auto a : atcs) {
-            if (_atc_name == a->name()) {
-                _atc      = a;
-                _atc_info = " with " + _atc_name;
-                return;
+            if (strcmp(_atc_name.c_str(), a->name()) == 0) {
+                _atc = a;
             }
-        }
-        if (!_m6_macro._gcode.empty()) {
-            _atc_info = " with m6_macro";
         }
     }
 
-    void Spindle::switchSpindle(uint32_t new_tool, SpindleList spindles, Spindle*& spindle, bool& stop_spindle, bool& new_spindle) {
+    void Spindle::switchSpindle(uint32_t new_tool, SpindleList spindles, Spindle*& spindle, bool& stop_spindle) {
         // Find the spindle whose tool number is closest to and below the new tool number
         Spindle* candidate = nullptr;
         for (auto s : spindles) {
@@ -44,7 +39,6 @@ namespace Spindles {
             }
             if (candidate != spindle) {
                 spindle = candidate;
-                new_spindle = true;
                 log_info("Changed to spindle:" << spindle->name());
             }
         } else {
@@ -126,11 +120,21 @@ namespace Spindles {
         _speeds.push_back({ max, 100.0f });
     }
 
+    std::string Spindle::atc_info() {  // this can be used in the startup response
+        std::string atc_info = "";
+        if (_atc != NULL) {
+            atc_info = " ATC:" + _atc_name;
+        } else if (!_m6_macro._gcode.empty()) {
+            atc_info = " m6_macro:";
+        }
+        return atc_info;
+    }
+
     // pre_select is generally ignored except for machines that need to get a tool ready
     // set_tool is just used to tell the atc what is already installed.
     bool Spindle::tool_change(uint32_t tool_number, bool pre_select, bool set_tool) {
         if (_atc != NULL) {
-            log_info(_name << " spindle changed to tool:" << tool_number << " using " << _atc_name);
+            log_info(_name << " spindle changed to tool:" << tool_number << " using ATC:" << _atc_name);
             return _atc->tool_change(tool_number, pre_select, set_tool);
         }
         if (!_m6_macro.get().empty()) {
@@ -139,10 +143,10 @@ namespace Spindles {
                 return true;
             }
             _last_tool = tool_number;
-            if (set_tool) {
+            if (set_tool) {}
+            if (tool_number == 0) {  // do nothing
                 return true;
             }
-
             //if (tool_number != _last_tool) {
             log_info(_name << " spindle run macro: " << _m6_macro.get());
             _m6_macro.run(nullptr);

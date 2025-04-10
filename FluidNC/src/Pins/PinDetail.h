@@ -8,7 +8,7 @@
 #include "PinOptionsParser.h"
 #include "src/Machine/EventPin.h"
 
-#include <cstdint>
+#include <stdint.h>
 #include <cstring>
 #include <string>
 #include <vector>

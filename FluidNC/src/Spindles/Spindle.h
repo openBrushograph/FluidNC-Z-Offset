@@ -26,19 +26,18 @@ namespace Spindles {
     class Spindle : public Configuration::Configurable {
     private:
         const char* _name;
-        std::string _atc_info = "";
 
     protected:
-        ATCs::ATC* _atc       = nullptr;
+        ATCs::ATC* _atc       = NULL;
         uint32_t   _last_tool = 0;
 
     public:
         Spindle(const char* name) : _name(name) {}
 
-        Spindle(const Spindle&) = delete;
-        Spindle(Spindle&&)      = delete;
+        Spindle(const Spindle&)            = delete;
+        Spindle(Spindle&&)                 = delete;
         Spindle& operator=(const Spindle&) = delete;
-        Spindle& operator=(Spindle&&) = delete;
+        Spindle& operator=(Spindle&&)      = delete;
 
         bool     _defaultedSpeeds;
         uint32_t offSpeed() { return _speeds[0].offset; }
@@ -48,12 +47,12 @@ namespace Spindles {
         void     shelfSpeeds(SpindleSpeed min, SpindleSpeed max);
         void     linearSpeeds(SpindleSpeed maxSpeed, float maxPercent);
 
-        static void switchSpindle(uint32_t new_tool, SpindleList spindles, Spindle*& spindle, bool& stop_spindle, bool& new_spindle);
+        static void switchSpindle(uint32_t new_tool, SpindleList spindles, Spindle*& spindle, bool& stop_spindle);
 
         void         spindleDelay(SpindleState state, SpindleSpeed speed);
         virtual void init() = 0;  // not in constructor because this also gets called when $$ settings change
         virtual void init_atc();
-        std::string  atc_info() { return _atc_info; };
+        std::string  atc_info();
 
         // Used by Protocol.cpp to restore the state during a restart
         virtual void    setState(SpindleState state, uint32_t speed) = 0;
@@ -112,7 +111,6 @@ namespace Spindles {
     protected:
         uint8_t _current_tool = 0;
     };
-
     using SpindleFactory = Configuration::GenericFactory<Spindle>;
 }
 extern Spindles::Spindle* spindle;

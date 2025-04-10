@@ -255,16 +255,16 @@ namespace WebUI {
                                 modeName = "???";
                         }
 
-                        j.id_value_object("Phy Mode", modeName);
-                        j.id_value_object("Channel", WiFi.channel());
+                        j.id_value_object("Phy Mode: ", modeName);
+                        j.id_value_object("Channel: ", WiFi.channel());
 
                         tcpip_adapter_dhcp_status_t dhcp_status;
                         tcpip_adapter_dhcpc_get_status(TCPIP_ADAPTER_IF_STA, &dhcp_status);
-                        j.id_value_object("IP Mode", (dhcp_status == TCPIP_ADAPTER_DHCP_STARTED ? "DHCP" : "Static"));
-                        j.id_value_object("IP", IP_string(WiFi.localIP()));
-                        j.id_value_object("Gateway", IP_string(WiFi.gatewayIP()));
-                        j.id_value_object("Mask", IP_string(WiFi.subnetMask()));
-                        j.id_value_object("DNS", IP_string(WiFi.dnsIP()));
+                        j.id_value_object("IP Mode: ", (dhcp_status == TCPIP_ADAPTER_DHCP_STARTED ? "DHCP" : "Static"));
+                        j.id_value_object("IP: ", IP_string(WiFi.localIP()));
+                        j.id_value_object("Gateway: ", IP_string(WiFi.gatewayIP()));
+                        j.id_value_object("Mask: ", IP_string(WiFi.subnetMask()));
+                        j.id_value_object("DNS: ", IP_string(WiFi.dnsIP()));
 
                     }  //this is web command so connection => no command
                     j.id_value_object("Disabled Mode", std::string("AP (") + WiFi.softAPmacAddress().c_str() + ")");
@@ -275,11 +275,11 @@ namespace WebUI {
                     wifi_country_t country;
                     esp_wifi_get_config(WIFI_IF_AP, &conf);
                     esp_wifi_get_country(&country);
-                    j.id_value_object("SSID", (const char*)conf.ap.ssid);
-                    j.id_value_object("Visible", (conf.ap.ssid_hidden == 0 ? "Yes" : "No"));
-                    j.id_value_object("Radio country set",
-                                      std::string("") + country.cc[0] + country.cc[1] + " (channels " + std::to_string(country.schan) +
-                                          "-" + std::to_string((country.schan + country.nchan - 1)) + ", max power " +
+                    j.id_value_object("SSID: ", (const char*)conf.ap.ssid);
+                    j.id_value_object("Visible: ", (conf.ap.ssid_hidden == 0 ? "Yes" : "No"));
+                    j.id_value_object("Radio country set: ",
+                                      std::string("") + country.cc + " (channels " + std::to_string(country.schan) + "-" +
+                                          std::to_string((country.schan + country.nchan - 1)) + ", max power " +
                                           std::to_string(country.max_tx_power) + "dBm)");
 
                     const char* mode;
@@ -512,29 +512,15 @@ namespace WebUI {
                 j.member("Authentication", "Disabled");
 #endif
                 j.member("WebCommunication", "Synchronous");
+                j.member("WebSocketIP", "localhost");
 
-                switch (WiFi.getMode()) {
-                  case WIFI_AP:
-                    j.member("WebSocketIP", IP_string(WiFi.softAPIP()));
-                    break;
-                  case WIFI_STA:
-                    j.member("WebSocketIP", IP_string(WiFi.localIP()));
-                    break;
-                  case WIFI_AP_STA:
-                    j.member("WebSocketIP", IP_string(WiFi.softAPIP()));
-                    break;
-                  default:
-                    j.member("WebSocketIP", "0.0.0.0");
-                    break;
-                }
-
-                j.member("WebSocketPort", std::to_string(Web_Server::port() + 2));
+                j.member("WebSocketPort", "82");
                 j.member("HostName", WiFi.getHostname());
                 j.member("WiFiMode", modeName());
                 j.member("FlashFileSystem", "LittleFS");
                 j.member("HostPath", "/");
                 j.member("Time", "none");
-                j.member("Axisletters", Axes::_names);
+                j.member("Axisletters", config->_axes->_names);
                 j.end_object();
                 j.end();
                 return Error::Ok;
@@ -574,18 +560,7 @@ namespace WebUI {
             s << "no";
 #endif
             s << " # webcommunication: Sync: ";
-            s << std::to_string(Web_Server::port() + 1);
-#if 0
-            // If we omit the explicit IP address for the websocket,
-            // WebUI will use the same IP address that it uses for
-            // HTTP, with the port number as above.  That is better
-            // than providing an explicit address, because if the WiFi
-            // drops and comes back up again, DHCP might assign a
-            // different IP address so the one provided below would no
-            // longer work.  But if we are using an MDNS address like
-            // fluidnc.local, a websocket reconnection will succeed
-            // because MDNS will offer the new IP address.
-            s << ":";
+            s << std::to_string(Web_Server::port() + 1) + ":";
             switch (WiFi.getMode()) {
                 case WIFI_AP:
                     s << IP_string(WiFi.softAPIP());
@@ -600,7 +575,6 @@ namespace WebUI {
                     s << "0.0.0.0";
                     break;
             }
-#endif
             s << " # hostname:";
             s << WiFi.getHostname();
             if (WiFi.getMode() == WIFI_AP) {
@@ -608,7 +582,7 @@ namespace WebUI {
             }
 
             //to save time in decoding `?`
-            s << " # axis:" << Axes::_numberAxis;
+            s << " # axis:" << config->_axes->_numberAxis;
             return Error::Ok;
         }
 
@@ -642,26 +616,14 @@ namespace WebUI {
      */
 
         static void WiFiEvent(WiFiEvent_t event) {
-            static bool disconnect_seen = false;
             switch (event) {
                 case SYSTEM_EVENT_STA_GOT_IP:
                     break;
                 case SYSTEM_EVENT_STA_DISCONNECTED:
-                    if (!disconnect_seen) {
-                        log_info_to(Uart0, "WiFi Disconnected");
-                        disconnect_seen = true;
-                    }
-                    break;
-                case SYSTEM_EVENT_STA_START:
-                    break;
-                case SYSTEM_EVENT_STA_STOP:
-                    break;
-                case SYSTEM_EVENT_STA_CONNECTED:
-                    disconnect_seen = false;
-                    log_info_to(Uart0, "WiFi STA Connected");
+                    log_info("WiFi Disconnected");
                     break;
                 default:
-                    log_debug_to(Uart0, "WiFi event: " << (int)event);
+                    //log_info("WiFi event:" << event);
                     break;
             }
         }
@@ -730,7 +692,6 @@ namespace WebUI {
             WiFi.mode(WIFI_STA);
             WiFi.setMinSecurity(static_cast<wifi_auth_mode_t>(_sta_min_security->get()));
             WiFi.setScanMethod(_fast_scan->get() ? WIFI_FAST_SCAN : WIFI_ALL_CHANNEL_SCAN);
-            WiFi.setAutoReconnect(true);
             //Get parameters for STA
             //password
             const char* password = _sta_password->get();

@@ -82,7 +82,7 @@ static const int axesStringLen  = coordStringLen * MAX_N_AXIS;
 // Sends the axis values to the output channel
 static std::string report_util_axis_values(const float* axis_value) {
     std::ostringstream msg;
-    auto               n_axis = Axes::_numberAxis;
+    auto               n_axis = config->_axes->_numberAxis;
     for (size_t idx = 0; idx < n_axis; idx++) {
         int   decimals;
         float value = axis_value[idx];
@@ -367,7 +367,7 @@ void report_gcode_modes(Channel& channel) {
         msg << " M56";
     }
 
-    msg << " T" << gc_state.selected_tool;
+    msg << " T" << gc_state.tool;
     int digits = config->_reportInches ? 1 : 0;
     msg << " F" << std::fixed << std::setprecision(digits) << gc_state.feed_rate;
     msg << " S" << uint32_t(gc_state.spindle_speed);
@@ -434,7 +434,7 @@ void addPinReport(char* status, char pinLetter) {
 
 void mpos_to_wpos(float* position) {
     float* wco    = get_wco();
-    auto   n_axis = Axes::_numberAxis;
+    auto   n_axis = config->_axes->_numberAxis;
     for (int idx = 0; idx < n_axis; idx++) {
         position[idx] -= wco[idx];
     }
@@ -483,11 +483,11 @@ void report_recompute_pin_string() {
 
     MotorMask lim_pin_state = limits_get_state();
     if (lim_pin_state) {
-        auto n_axis = Axes::_numberAxis;
+        auto n_axis = config->_axes->_numberAxis;
         for (size_t axis = 0; axis < n_axis; axis++) {
             if (bitnum_is_true(lim_pin_state, Machine::Axes::motor_bit(axis, 0)) ||
                 bitnum_is_true(lim_pin_state, Machine::Axes::motor_bit(axis, 1))) {
-                report_pin_string += Axes::axisName(axis);
+                report_pin_string += config->_axes->axisName(axis);
             }
         }
     }
