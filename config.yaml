@@ -1,0 +1,51 @@
+name: "FluidNC ULN2003 Config"
+board: "ESP32"
+
+stepping:
+  engine: RMT
+  idle_ms: 250
+  dir_delay_us: 1
+  pulse_us: 8
+  disable_delay_us: 0
+
+axes:
+  shared_stepper_disable_pin: NO_PIN
+  
+  x:
+    steps_per_mm: 256
+    max_rate_mm_per_min: 500
+    acceleration_mm_per_sec2: 10
+    max_travel_mm: 200
+    
+    motor0:
+      unipolar:
+        phase0_pin: gpio.12
+        phase1_pin: gpio.14
+        phase2_pin: gpio.27
+        phase3_pin: gpio.26
+
+  y:
+    steps_per_mm: 4096
+    max_rate_mm_per_min: 500
+    acceleration_mm_per_sec2: 10
+    max_travel_mm: 200
+
+    motor0:
+      unipolar:
+        phase0_pin: gpio.32
+        phase1_pin: gpio.33
+        phase2_pin: gpio.15
+        phase3_pin: gpio.2
+
+  z:
+    steps_per_mm: 4096
+    max_rate_mm_per_min: 300
+    acceleration_mm_per_sec2: 8
+    max_travel_mm: 100
+
+    motor0:
+      unipolar:
+        phase0_pin: gpio.22
+        phase1_pin: gpio.23
+        phase2_pin: gpio.19
+        phase3_pin: gpio.18

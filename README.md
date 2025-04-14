@@ -1,5 +1,11 @@
 <img src="https://github.com/bdring/FluidNC/wiki/images/logos/FluidNC.svg" width="600">
 
+## uln2003
+
+Hey, this is a "mutant" fork of FluidNC, adding support for unipolar motors from a previous version, 3.8.4.
+
+You can also find "config.yaml" in the project root directory, which should work fine for ULN2003 drivers.
+
 ## Introduction
 
 **FluidNC** is a CNC firmware optimized for the ESP32 controller. It is the next generation of firmware from the creators of Grbl_ESP32. It includes a web based UI and the flexibility to operate a wide variety of machine types. This includes the ability to control machines with multiple tool types such as laser plus spindle or a tool changer.  
