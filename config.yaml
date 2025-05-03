@@ -1,51 +1,60 @@
-name: "FluidNC ULN2003 Config"
-board: "ESP32"
-
+name: FluidNC ULN2003 Config
+board: ESP32
 stepping:
   engine: RMT
   idle_ms: 250
   dir_delay_us: 1
   pulse_us: 8
   disable_delay_us: 0
-
 axes:
   shared_stepper_disable_pin: NO_PIN
-  
   x:
     steps_per_mm: 85
     max_rate_mm_per_min: 1000
-    acceleration_mm_per_sec2: 10
+    acceleration_mm_per_sec2: 50
     max_travel_mm: 200
-    
     motor0:
       unipolar:
-        phase0_pin: gpio.12
+        phase0_pin: gpio.27
         phase1_pin: gpio.14
-        phase2_pin: gpio.27
-        phase3_pin: gpio.26
-
+        phase2_pin: gpio.13
+        phase3_pin: gpio.4
+      limit_neg_pin: NO_PIN
+      limit_pos_pin: NO_PIN
+      limit_all_pin: NO_PIN
   y:
     steps_per_mm: 85
     max_rate_mm_per_min: 1000
-    acceleration_mm_per_sec2: 10
+    acceleration_mm_per_sec2: 50
     max_travel_mm: 200
-
     motor0:
       unipolar:
         phase0_pin: gpio.22
-        phase1_pin: gpio.23
-        phase2_pin: gpio.19
-        phase3_pin: gpio.18
-
+        phase1_pin: gpio.21
+        phase2_pin: gpio.17
+        phase3_pin: gpio.16
+      limit_neg_pin: NO_PIN
+      limit_pos_pin: NO_PIN
+      limit_all_pin: NO_PIN
   z:
-    steps_per_mm: 85
-    max_rate_mm_per_min: 1000
-    acceleration_mm_per_sec2: 8
+    steps_per_mm: 78
+    max_rate_mm_per_min: 300
+    acceleration_mm_per_sec2: 30
     max_travel_mm: 100
-
     motor0:
       unipolar:
-        phase0_pin: gpio.17
-        phase1_pin: gpio.16
-        phase2_pin: gpio.4
-        phase3_pin: gpio.0
+        phase0_pin: gpio.32
+        phase1_pin: gpio.33
+        phase2_pin: gpio.25
+        phase3_pin: gpio.26
+      limit_neg_pin: NO_PIN
+      limit_pos_pin: NO_PIN
+      limit_all_pin: NO_PIN
+
+spi:
+  miso_pin: gpio.19
+  mosi_pin: gpio.23
+  sck_pin: gpio.18
+sdcard:
+  card_detect_pin: no_pin
+  cs_pin: gpio.5
