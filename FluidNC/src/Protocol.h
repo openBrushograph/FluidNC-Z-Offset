@@ -90,6 +90,7 @@ extern const ArgEvent spindleOverrideEvent;
 extern const ArgEvent accessoryOverrideEvent;
 extern const ArgEvent limitEvent;
 extern const ArgEvent faultPinEvent;
+extern const ArgEvent babystepEvent;
 
 extern const ArgEvent reportStatusEvent;
 

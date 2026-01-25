@@ -1095,6 +1095,14 @@ static void protocol_do_fault_pin(void* arg) {
     ControlPin* pin = (ControlPin*)arg;
     log_info("Stopped by " << pin->legend());
 }
+static void protocol_do_babystep(void* arg) {
+    if (state_is(State::Cycle) || state_is(State::Jog) || state_is(State::Idle) || state_is(State::Hold)) {
+        int direction = int(arg);
+        // Arg is 1 (UP) or -1 (DOWN)
+        Stepper::babystep(Z_AXIS, direction > 0);
+    }
+}
+
 void protocol_do_rt_reset() {
     if (state_is(State::Homing)) {
         Machine::Homing::fail(ExecAlarm::HomingFailReset);
@@ -1120,6 +1128,7 @@ const ArgEvent spindleOverrideEvent { protocol_do_spindle_override };
 const ArgEvent accessoryOverrideEvent { protocol_do_accessory_override };
 const ArgEvent limitEvent { protocol_do_limit };
 const ArgEvent faultPinEvent { protocol_do_fault_pin };
+const ArgEvent babystepEvent { protocol_do_babystep };
 const ArgEvent reportStatusEvent { (void (*)(void*))report_realtime_status };
 
 const NoArgEvent safetyDoorEvent { request_safety_door };

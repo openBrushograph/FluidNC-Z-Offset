@@ -45,5 +45,7 @@ namespace Stepper {
     // Called by realtime status reporting if realtime rate reporting is enabled in config.h.
     float get_realtime_rate();
 
+    void babystep(int axis, bool direction);
+
     extern uint32_t isr_count;
 }
