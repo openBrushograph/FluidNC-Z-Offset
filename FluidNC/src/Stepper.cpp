@@ -214,8 +214,6 @@ bool IRAM_ATTR Stepper::pulse_func() {
 
     config->_axes->step(st.step_outbits, st.dir_outbits);
 
-    config->_axes->step(st.step_outbits, st.dir_outbits);
-
     // If there is no step segment, attempt to pop one from the stepper buffer
     if (st.exec_segment == NULL) {
         // Anything in the buffer? If so, load and initialize next step segment.
