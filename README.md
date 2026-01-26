@@ -2,7 +2,7 @@
 
 ## Z-Offset Babystepping
 
-This fork implements realtime Z-axis babystepping, allowing instant Z-axis nudges (0.01mm) bypassing the motion planner. See [README-Z-OFFSET.md](README-Z-OFFSET.md) for full implementation details.
+This fork implements realtime Z-axis babystepping, allowing instant Z-axis nudges (0.1mm) bypassing the motion planner. See [README-Z-OFFSET.md](README-Z-OFFSET.md) for full implementation details.
 
 ## uln2003
 
