@@ -1,5 +1,9 @@
 <img src="https://github.com/bdring/FluidNC/wiki/images/logos/FluidNC.svg" width="600">
 
+## Z-Offset Babystepping
+
+This fork implements realtime Z-axis babystepping, allowing instant Z-axis nudges (0.01mm) bypassing the motion planner. See [README-Z-OFFSET.md](README-Z-OFFSET.md) for full implementation details.
+
 ## uln2003
 
 Hey, this is a "mutant" fork of FluidNC, adding support for unipolar motors from a previous version, 3.8.4.

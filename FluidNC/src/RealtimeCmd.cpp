@@ -5,6 +5,7 @@
 #include "Report.h"
 #include "System.h"
 #include "Machine/Macros.h"  // macroNEvent
+#include "Machine/MachineConfig.h"
 
 // Act upon a realtime character
 void execute_realtime_command(Cmd command, Channel& channel) {
@@ -96,12 +97,23 @@ void execute_realtime_command(Cmd command, Channel& channel) {
         case Cmd::Macro3:
             protocol_send_event(&macro3Event);
             break;
-        case Cmd::BabystepZUp:
-            protocol_send_event(&babystepEvent, (void*)1);
+// ... (cleanup)
+        case Cmd::BabystepZUp: {
+            float steps_mm = config->_axes->_axis[Z_AXIS]->_stepsPerMm;
+            int steps = round(steps_mm * 0.1f);
+            if (steps < 1) steps = 1;
+            protocol_send_event(&babystepEvent, (void*)steps);
             break;
-        case Cmd::BabystepZDown:
-            protocol_send_event(&babystepEvent, (void*)-1);
+        }
+        case Cmd::BabystepZDown: {
+            float steps_mm = config->_axes->_axis[Z_AXIS]->_stepsPerMm;
+            int steps = round(steps_mm * 0.1f);
+            if (steps < 1) steps = 1;
+
+            // Note: Protocol handler casts to int, so -steps is correct for direction
+            protocol_send_event(&babystepEvent, (void*)-steps);
             break;
+        }
         default:
             break;
     }

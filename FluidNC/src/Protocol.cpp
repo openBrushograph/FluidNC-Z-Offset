@@ -1097,9 +1097,9 @@ static void protocol_do_fault_pin(void* arg) {
 }
 static void protocol_do_babystep(void* arg) {
     if (state_is(State::Cycle) || state_is(State::Jog) || state_is(State::Idle) || state_is(State::Hold)) {
-        int direction = int(arg);
-        // Arg is 1 (UP) or -1 (DOWN)
-        Stepper::babystep(Z_AXIS, direction > 0);
+        int steps = int(arg);
+        // Call the stepper subsystem to register the request
+        Stepper::babystep(Z_AXIS, steps);
     }
 }
 

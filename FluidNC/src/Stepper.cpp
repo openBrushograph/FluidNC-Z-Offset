@@ -88,13 +88,9 @@ static uint32_t          segment_next_head;
 
 static volatile int32_t babystep_accumulator[MAX_N_AXIS];
 
-void Stepper::babystep(int axis, bool direction) {
+void Stepper::babystep(int axis, int steps) {
     if (axis < MAX_N_AXIS) {
-        if (direction) {
-            babystep_accumulator[axis]++;
-        } else {
-            babystep_accumulator[axis]--;
-        }
+        babystep_accumulator[axis] += steps;
     }
 }
 

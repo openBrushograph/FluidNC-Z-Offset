@@ -12,8 +12,8 @@ We intercepted the command stream to recognize two new custom characters (`0xB0`
 enum class Cmd : uint8_t {
     // ... existing commands ...
     CoolantMistOvrToggle  = 0xA1,
-    BabystepZUp           = 0xB0, // New: Extended ASCII 176
-    BabystepZDown         = 0xB1, // New: Extended ASCII 177
+    BabystepZUp           = 0xB0, // New: Extended ASCII 176 (Moves Z +0.1mm)
+    BabystepZDown         = 0xB1, // New: Extended ASCII 177 (Moves Z -0.1mm)
 };
 ```
 
