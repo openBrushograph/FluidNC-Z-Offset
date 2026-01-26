@@ -1,4 +1,5 @@
 #include "RealtimeCmd.h"
+#include <cmath> // Added for round()
 #include "Config.h"
 #include "Channel.h"
 #include "Protocol.h"
