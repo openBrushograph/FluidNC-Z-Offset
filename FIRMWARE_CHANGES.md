@@ -67,6 +67,27 @@ Inside `pulse_func()`, after the standard planner block steps are executed, we c
 **Cause:** A duplicate `config->_axes->step(...)` call was accidentally left in `Stepper.cpp`.
 **Fix:** Removed the duplicate line.
 
+## Installation
+
+### Option 1: Pre-compiled Binary (Easiest)
+If you just want to run the firmware without compiling it yourself:
+1.  **Download:** [fluidnc-uln2003-3.9.6-z-nudge-wifi.bin](fluidnc-uln2003-3.9.6-z-nudge-wifi.bin)
+2.  **Existing FluidNC Users:**
+    *   Go to your machine's WebUI -> **Firmware** tab.
+    *   Upload the `.bin` file.
+    *   The machine will reboot with the new firmware.
+3.  **New Users / Recovery:**
+    *   Use the [FluidNC Web Installer](https://installer.fluidnc.com/) (select "Custom" if supported, or use `esptool` to flash the bin to address `0x10000`).
+
+### Option 2: Build from Source (PlatformIO)
+If you want to modify the code:
+1.  Open this folder in VS Code with the PlatformIO extension installed.
+2.  Connect your ESP32 via USB.
+3.  Run the upload command:
+    ```bash
+    pio run -e wifi -t upload
+    ```
+
 ## How to Use
 
 ### 1. General Usage (Serial/Macros)
