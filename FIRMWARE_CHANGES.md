@@ -1,6 +1,6 @@
 # FluidNC Firmware Modification: Realtime Z-Babystepping
 
-![FluidNC Logo](Raster_FluidNC-logo.jpg)
+![FluidNC Logo](z-babystep/Raster_FluidNC-logo.jpg)
 
 This document details the changes made to the `FluidNC` source code to implement realtime, planner-bypassing Z-axis nudging (0.1mm increments).
 
@@ -66,4 +66,29 @@ Inside `pulse_func()`, after the standard planner block steps are executed, we c
 **Symptoms:** Machine coordinates and movements were exactly **2x** the expected values.
 **Cause:** A duplicate `config->_axes->step(...)` call was accidentally left in `Stepper.cpp`.
 **Fix:** Removed the duplicate line.
+
+## How to Use
+
+### 1. General Usage (Serial/Macros)
+To nudge the Z-axis, you must send specific extended ASCII characters to the controller. These bypass the planner and execute immediately.
+
+*   **Move Z UP (+0.1mm):** Send `0xB0` (Extended ASCII 176)
+*   **Move Z DOWN (-0.1mm):** Send `0xB1` (Extended ASCII 177)
+
+**Note:** Most standard serial consoles (Arduino Monitor, etc.) cannot send these raw bytes easily. You need a terminal that supports hex/macros (like CoolTerm, RealTerm) or use the WebUI extension below.
+
+### 2. WebUI Extension (Recommended)
+![Z-Babystep Extension Screenshot](z-babystep/Screenshot_z-babystepper.png)
+
+We created a simple "plugin" for the FluidNC WebUI to make this easy to use on your phone or PC.
+
+1.  **Download:** Get `z-babystep/z-babystep.html` from this repository.
+2.  **Upload:**
+    *   Open your machine's WebUI.
+    *   Go to the **Files** tab (Folder icon).
+    *   Upload `z-babystep.html` to the Flash or SD card.
+3.  **Run:**
+    *   Click on `z-babystep.html` in the file list.
+    *   Click the **View** (Eye icon) button.
+4.  **Control:** A dedicated interface will pop up with large "UP" and "DOWN" buttons. Tap them to nudge your brush while drawing!
 
