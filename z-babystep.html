@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Z-Babystepper (Native)</title>
+    <style>
+        :root {
+            --primary: #d63384;
+            /* Pink for "Baby" steps */
+            --primary-hover: #a61e60;
+            --text-dark: #333;
+            --text-muted: #6c757d;
+            --border: #dee2e6;
+            --bg: #f8f9fa;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid rgba(0, 0, 0, .125);
+            border-radius: 0.25rem;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);
+        }
+
+        .card-header {
+            padding: 0.75rem 1.25rem;
+            margin-bottom: 0;
+            background-color: #fff;
+            border-bottom: 1px solid rgba(0, 0, 0, .125);
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-body {
+            padding: 1.25rem;
+        }
+
+        .section-title {
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            color: var(--primary);
+            background-color: transparent;
+            background-image: none;
+            border: 2px solid var(--primary);
+            padding: 1rem 1rem;
+            font-size: 1.2rem;
+            line-height: 1.5;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all .1s ease-in-out;
+            font-weight: 700;
+            flex: 1;
+            /* Prevent touch selection behavior */
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        button:active {
+            color: #fff;
+            background-color: var(--primary);
+            transform: scale(0.98);
+        }
+
+        .status-bar {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .connection-box {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        /* Icon simulation */
+        .icon-flash {
+            display: inline-block;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 16px solid var(--primary);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="icon-flash"></span>
+            Z-Babystepper (Native)
+        </div>
+        <div class="card-body">
+
+            <div class="connection-box">
+                <input type="text" id="wsHost" value="brushographwhite.local"
+                    placeholder="hostname (e.g. fluidnc.local)">
+                <button style="flex:0; padding: 5px 15px; font-size: 0.9rem;" onclick="connect()">Connect</button>
+            </div>
+
+            <div class="section-title">Realtime Injection</div>
+
+            <div class="btn-group">
+                <button id="btnDown" onmousedown="startRepeat(0xB1)" onmouseup="stopRepeat()"
+                    onmouseleave="stopRepeat()" ontouchstart="startRepeat(0xB1)" ontouchend="stopRepeat()">
+                    DOWN<br><small>(Z-)</small>
+                </button>
+                <button id="btnUp" onmousedown="startRepeat(0xB0)" onmouseup="stopRepeat()" onmouseleave="stopRepeat()"
+                    ontouchstart="startRepeat(0xB0)" ontouchend="stopRepeat()">
+                    UP<br><small>(Z+)</small>
+                </button>
+            </div>
+
+            <div style="text-align: center; font-size: 0.8rem; color: #999;">
+                Hold for continuous adjustment.<br>
+                Requires "Babystep Mod" Firmware.
+            </div>
+
+            <div class="status-bar" id="status">
+                Disconnected
+            </div>
+
+            <div id="console"
+                style="margin-top:10px; font-family:monospace; font-size:0.7rem; height:100px; overflow-y:auto; background:#eee; padding:5px; border-radius:4px;">
+                > Ready.
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        let socket;
+        let repeatTimer = null;
+
+        // Extended ASCII commands
+        const CMD_Z_UP = 0xB0;   // 176
+        const CMD_Z_DOWN = 0xB1; // 177
+
+        function log(msg) {
+            const el = document.getElementById('console');
+            el.innerHTML += `<div>${msg}</div>`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function setStatus(msg, color) {
+            const el = document.getElementById('status');
+            el.innerText = msg;
+            if (color) el.style.color = color;
+        }
+
+        function connect() {
+            let host = document.getElementById('wsHost').value.trim();
+
+            // Auto-format for user convenience
+            if (!host.startsWith('ws://') && !host.startsWith('wss://')) {
+                host = 'ws://' + host;
+            }
+            if (!host.match(/:\d+$/)) {
+                host = host + ':81';
+            }
+
+            setStatus('Connecting to ' + host + '...', 'orange');
+
+            try {
+                socket = new WebSocket(host);
+
+                socket.onopen = function () {
+                    setStatus('Connected (Realtime)', 'green');
+                    log('WebSocket Connected.');
+                };
+
+                socket.onclose = function () {
+                    setStatus('Disconnected', 'red');
+                    log('WebSocket Closed.');
+                };
+
+                socket.onerror = function (err) {
+                    setStatus('Error', 'red');
+                    log('WebSocket Error.');
+                };
+
+                socket.onmessage = function (e) {
+                    // We might receive "ok" or position updates here
+                    // log('RX: ' + e.data);
+                };
+
+            } catch (e) {
+                log('Connection Failed: ' + e.message);
+            }
+        }
+
+        function sendByte(byteVal) {
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                log('Error: Not Connected');
+                return;
+            }
+
+            const buffer = new Uint8Array([byteVal]);
+            socket.send(buffer);
+            log(`TX: Byte ${byteVal.toString(16).toUpperCase()}`);
+        }
+
+        // Repeating logic for "Hold to Move"
+        function startRepeat(byteVal) {
+            if (repeatTimer) clearInterval(repeatTimer);
+            sendByte(byteVal); // Send once immediately
+
+            // Repeat every 100ms (10Hz)
+            repeatTimer = setInterval(() => {
+                sendByte(byteVal);
+            }, 100);
+        }
+
+        function stopRepeat() {
+            if (repeatTimer) {
+                clearInterval(repeatTimer);
+                repeatTimer = null;
+            }
+        }
+
+        // Auto-connect if on fluidnc.local
+        if (window.location.hostname.includes('fluidnc') || window.location.hostname.includes('192.168')) {
+            document.getElementById('wsHost').value = 'ws://' + window.location.hostname + ':81';
+            connect();
+        }
+
+    </script>
+</body>
+
+</html>
