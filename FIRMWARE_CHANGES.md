@@ -72,12 +72,10 @@ Inside `pulse_func()`, after the standard planner block steps are executed, we c
 ### Option 1: Pre-compiled Binary (Easiest)
 If you just want to run the firmware without compiling it yourself:
 1.  **Download:** [fluidnc-uln2003-3.9.6-z-nudge-wifi.bin](fluidnc-uln2003-3.9.6-z-nudge-wifi.bin)
-2.  **Existing FluidNC Users:**
-    *   Go to your machine's WebUI -> **Firmware** tab.
-    *   Upload the `.bin` file.
-    *   The machine will reboot with the new firmware.
-3.  **New Users / Recovery:**
-    *   Use the [FluidNC Web Installer](https://installer.fluidnc.com/) (select "Custom" if supported, or use `esptool` to flash the bin to address `0x10000`).
+    *   *Configuration:* **ESP32** standard (not S3/C3), **WiFi** enabled, **Bluetooth** disabled.
+2.  **Upload:** Use the FluidNC Web Installer or your preferred flashing tool (e.g. `esptool`).
+    *   **Web Installer:** [https://installer.fluidnc.com/](https://installer.fluidnc.com/) (Choose 'Custom' to upload this bin).
+    *   **Esptool:** Flash to address `0x10000`.
 
 ### Option 2: Build from Source (PlatformIO)
 If you want to modify the code:
