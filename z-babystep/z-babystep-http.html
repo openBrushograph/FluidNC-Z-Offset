@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Z-Babystep (HTTP)</title>
+    <style>
+        :root {
+            /* Default (Light) Theme */
+            --primary: #e83e8c;
+            /* Pinkish */
+            --primary-hover: #d63384;
+            --text-main: #212529;
+            --text-muted: #6c757d;
+            --border: #dee2e6;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --btn-text: #e83e8c;
+            --btn-border: #e83e8c;
+            --header-bg: #fff;
+            --shadow: none;
+        }
+
+        /* Tropical Theme (Cyber-Jungle) */
+        body.theme-tropical {
+            --primary: #ff00ff;
+            /* Neon Magenta */
+            --primary-hover: #ff66ff;
+            --text-main: #e0ffe0;
+            /* Pale Mint */
+            --text-muted: #5ccc5c;
+            /* Dim Green */
+            --border: #2e8b57;
+            /* Sea Green */
+            --bg: #051a05;
+            /* Deep Jungle Dark */
+            --card-bg: #0a220a;
+            /* Dark Green Panel */
+            --btn-text: #ff00ff;
+            --btn-border: #ff00ff;
+            --header-bg: #0f330f;
+            --shadow: 0 0 15px rgba(255, 0, 255, 0.2);
+        }
+
+        body {
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .z-card {
+            background: var(--card-bg);
+            border: none;
+            border-radius: 0;
+            width: 100%;
+            max-width: 100%;
+            box-shadow: none;
+            transition: background 0.3s;
+            min-height: 100vh;
+            /* Force full height to cover white iframe bg */
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (min-width: 500px) {
+            .z-card {
+                max-width: 340px;
+                border: 1px solid var(--border);
+                border-radius: 0.25rem;
+                box-shadow: var(--shadow);
+                min-height: auto;
+                /* Fit content on desktop */
+            }
+        }
+
+        .z-header {
+            padding: 0.5rem;
+            margin-bottom: 0;
+            background-color: var(--header-bg);
+            border-bottom: 1px solid var(--border);
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            /* Space for theme toggle */
+        }
+
+        .theme-toggle {
+            display: flex;
+            gap: 5px;
+        }
+
+        .theme-btn {
+            font-size: 0.7rem;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+
+        .theme-btn:hover {
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .z-body {
+            padding: 5px;
+            flex: 1;
+            /* Fill remaining space */
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 4px;
+            margin-bottom: 5px;
+        }
+
+        .control-col {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .col-header {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+            text-align: center;
+        }
+
+        button.ctrl-btn {
+            flex: 1;
+            padding: 0.5rem 0.25rem;
+            font-size: 1rem;
+            font-weight: bold;
+            color: var(--btn-text);
+            background-color: transparent;
+            border: 1px solid var(--btn-border);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            line-height: 1.2;
+            width: 100%;
+        }
+
+        /* Tropical Override for special buttons? maybe standard is fine */
+
+        button.ctrl-btn small {
+            font-size: 0.7rem;
+            font-weight: normal;
+        }
+
+        button.ctrl-btn:active,
+        button.ctrl-btn.active-key {
+            background-color: var(--primary);
+            color: #fff;
+            transform: translateY(1px);
+        }
+
+        button.ctrl-btn:disabled {
+            border-color: #555;
+            color: #555;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        button.btn-reset {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            margin-top: 2px;
+        }
+
+        button.btn-reset:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .connection-bar {
+            margin-top: 5px;
+            padding-top: 5px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            color: var(--text-main);
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 0.25rem;
+            flex: 1 1 100%;
+            height: 28px;
+        }
+
+        .status-dot {
+            height: 8px;
+            width: 8px;
+            background-color: #ccc;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-text {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-left: 5px;
+        }
+
+        .shift-display {
+            text-align: center;
+            background: rgba(128, 128, 128, 0.1);
+            padding: 5px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid transparent;
+        }
+
+        body.theme-tropical .shift-display {
+            border-color: var(--border);
+        }
+
+        .shift-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
+        .shift-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.1;
+        }
+
+        .footer-note {
+            font-size: 0.65rem;
+            color: #888;
+            text-align: center;
+            margin-top: 5px;
+            line-height: 1.2;
+        }
+
+        .terminal-box {
+            background-color: #000;
+            border: 1px solid #333;
+            border-radius: 3px;
+            padding: 4px 6px;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            width: 100%;
+            flex: 0 0 100%;
+            height: 80px;
+            justify-content: flex-start;
+            box-sizing: border-box;
+            margin-bottom: 5px;
+            overflow-y: auto;
+        }
+
+        body.theme-tropical .terminal-box {
+            border-color: var(--border);
+            background-color: #051505;
+        }
+
+        .status-text {
+            font-size: 0.7rem;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 4px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 2px;
+        }
+
+        #debugMsg {
+            color: #00ff00;
+            opacity: 0.8;
+            font-size: 0.65rem;
+            line-height: 1.2;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        body.theme-tropical #debugMsg {
+            color: var(--primary);
+            /* Pink debug text in tropical mode? or keep green? Green is matrix-y. Keep Green. */
+            color: #00e5ff;
+            /* Cyan for tropical debug */
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="z-card" tabindex="0">
+        <div class="z-header">
+            <span>Z-Babystep (HTTP)</span>
+            <div class="theme-toggle">
+                <button class="theme-btn" onclick="setTheme('light')" title="Light Mode">☀️</button>
+                <button class="theme-btn" onclick="setTheme('tropical')" title="Tropical Mode"
+                    style="color:#ff00ff;">🌴</button>
+            </div>
+        </div>
+        <div class="z-body">
+
+            <!-- Z-Shift Display -->
+            <div class="shift-display">
+                <div class="shift-label">Session Adjustment</div>
+                <div class="shift-value" id="shiftVal">0.0</div>
+                <button class="btn-reset" onclick="resetShift()">Reset Counter</button>
+            </div>
+
+            <!-- 2-Column Control Grid -->
+            <div class="control-grid" style="grid-template-columns: 1fr 1fr;">
+
+                <!-- Column 1: 0.1mm -->
+                <div class="control-col">
+                    <div class="col-header">0.1mm</div>
+                    <button class="ctrl-btn" data-cmd="UP" data-val="0.1">▲</button>
+                    <button class="ctrl-btn" data-cmd="DOWN" data-val="-0.1">▼</button>
+                </div>
+
+                <!-- Column 2: Wake (Idle) -->
+                <div class="control-col">
+                    <div class="col-header" style="color:#6610f2;">Wake (0.1mm)</div>
+                    <button class="ctrl-btn" data-cmd="UP" data-val="0.1" data-wake="true"
+                        style="border-color: #6610f2; color: #6610f2;">▲</button>
+                    <button class="ctrl-btn" data-cmd="DOWN" data-val="-0.1" data-wake="true"
+                        style="border-color: #6610f2; color: #6610f2;">▼</button>
+                </div>
+
+            </div>
+
+            <!-- Keyboard Toggle (Compact) -->
+            <div style="margin-bottom: 5px; margin-top: 5px; display: flex; justify-content: center;">
+                <label
+                    style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; cursor: pointer; color: var(--text-muted);">
+                    <input type="checkbox" id="keyToggle">
+                    Enable Keyboard (PgUp/Dn)
+                </label>
+            </div>
+
+            <div class="connection-bar">
+                <div class="terminal-box">
+                    <div style="display:flex; align-items:center;">
+                        <span class="status-dot" id="statusDot" style="background-color: #4CAF50;"></span>
+                        <span class="status-text" id="statusText" style="color:#4CAF50;">Ready (HTTP)</span>
+                    </div>
+                    <div id="debugMsg">RX: -</div>
+                </div>
+                <div style="flex-grow: 1; display:flex; gap:5px; justify-content: flex-end; align-items: center;">
+                    <input type="text" id="wsHost" value="brushographwhite.local"
+                        placeholder="Hostname (e.g. fluidnc.local)" style="font-size:0.8rem;">
+                    <!-- No Connect Button Needed for HTTP -->
+                </div>
+            </div>
+
+            <div class="footer-note">
+                <strong style="color:var(--primary)">Mode: Stateless HTTP</strong><br>
+                Does not block main connection.<br>
+            </div>
+
+            <div class="footer-note" style="margin-top: 8px; font-size: 0.6rem;">
+                Requires <a href="https://github.com/openBrushograph/FluidNC-Z-Offset" target="_blank"
+                    style="color:#999; text-decoration: underline;">Custom Firmware</a>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        let totalZShift = 0.0;
+
+        // Commands (Extended ASCII)
+        const CMD_Z_UP = 0xB0;       // 176 (0.1mm)
+        const CMD_Z_DOWN = 0xB1;     // 177 (0.1mm)
+
+        function setTheme(mode) {
+            if (mode === 'tropical') {
+                document.body.classList.add('theme-tropical');
+            } else {
+                document.body.classList.remove('theme-tropical');
+            }
+        }
+
+        // Init
+        window.onload = () => {
+            const loc = window.location;
+            if (loc.hostname) {
+                document.getElementById('wsHost').value = loc.hostname;
+            }
+            setupButtons();
+        };
+
+        function setupButtons() {
+            const btns = document.querySelectorAll('.ctrl-btn[data-cmd]');
+            btns.forEach(btn => {
+                const cmdName = btn.getAttribute('data-cmd');
+                const val = parseFloat(btn.getAttribute('data-val'));
+                const wake = btn.getAttribute('data-wake') === 'true';
+
+                let cmdByte = 0;
+                if (cmdName === 'UP') cmdByte = CMD_Z_UP;
+                if (cmdName === 'DOWN') cmdByte = CMD_Z_DOWN;
+
+                // Single Shot Pointer Events
+                btn.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    e.target.setPointerCapture(e.pointerId);
+                    sendCommand(cmdByte, val, wake);
+                    btn.classList.add('active-key');
+                    setTimeout(() => btn.classList.remove('active-key'), 100);
+                });
+
+                btn.addEventListener('contextmenu', e => e.preventDefault());
+            });
+        }
+
+        function getBaseUrl() {
+            let host = document.getElementById('wsHost').value.trim();
+            if (!host) return window.location.origin;
+            if (!host.startsWith('http')) return 'http://' + host;
+            return host;
+        }
+
+        async function sendByte(byteVal, deltaUi) {
+            const baseUrl = getBaseUrl();
+            const charStr = String.fromCharCode(byteVal);
+            const cmdUrl = `${baseUrl}/command?cmd=${encodeURIComponent(charStr)}`;
+            const dot = document.getElementById('statusDot');
+
+            dot.style.backgroundColor = '#ff0';
+            try {
+                await fetch(cmdUrl, { method: 'GET' });
+                dot.style.backgroundColor = '#4CAF50';
+                if (deltaUi) updateShiftInternal(deltaUi);
+                // Debug
+                const debugEl = document.getElementById('debugMsg');
+                if (debugEl) debugEl.innerText = "HTTP: " + (byteVal === CMD_Z_UP ? "UP 0.1" : "DN 0.1");
+            } catch (e) {
+                if (e.message.includes("Failed to fetch")) {
+                    dot.style.backgroundColor = '#4CAF50';
+                    if (deltaUi) updateShiftInternal(deltaUi);
+                    const debugEl = document.getElementById('debugMsg');
+                    if (debugEl) debugEl.innerText = "Sent (Blind)";
+                } else {
+                    dot.style.backgroundColor = '#f00';
+                }
+            }
+        }
+
+        function updateShiftInternal(delta) {
+            totalZShift += delta;
+            totalZShift = Math.round(totalZShift * 100) / 100;
+            const el = document.getElementById('shiftVal');
+            const sign = totalZShift > 0 ? '+' : '';
+            el.innerText = `${sign}${totalZShift.toFixed(2)}`;
+            el.style.color = totalZShift === 0 ? '' : 'var(--primary)';
+        }
+
+        function resetShift() {
+            totalZShift = 0.0;
+            updateShiftInternal(0);
+        }
+
+        function wakeMachine() {
+            const baseUrl = getBaseUrl();
+            const cmd1 = "$J=G91 X0.01 F1000";
+            const cmd2 = "$J=G91 X-0.01 F1000";
+            fetch(`${baseUrl}/command?cmd=${encodeURIComponent(cmd1)}`);
+            setTimeout(() => fetch(`${baseUrl}/command?cmd=${encodeURIComponent(cmd2)}`), 50);
+        }
+
+        function sendCommand(byteVal, deltaUi, isWake = false) {
+            if (isWake) wakeMachine();
+            sendByte(byteVal, deltaUi);
+        }
+
+        // Keyboard Support (Single Trigger)
+        document.addEventListener('keydown', (e) => {
+            if (e.repeat) return; // Ignore hold-repeat from OS
+            const enabled = document.getElementById('keyToggle').checked;
+            if (!enabled) return;
+
+            if (e.key === "PageUp") {
+                e.preventDefault();
+                sendCommand(CMD_Z_UP, 0.1);
+            } else if (e.key === "PageDown") {
+                e.preventDefault();
+                sendCommand(CMD_Z_DOWN, -0.1);
+            }
+        });
+    </script>
+</body>
+
+</html>

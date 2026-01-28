@@ -2,7 +2,7 @@
 
 ![FluidNC Logo](z-babystep/Raster_FluidNC-logo.jpg)
 
-This document details the changes made to the `FluidNC` source code to implement realtime, planner-bypassing Z-axis nudging (0.1mm increments).
+This document details the changes made to the `FluidNC` source code to implement realtime, planner-bypassing Z-axis nudging (0.1mm and 0.5mm increments).
 
 ## Context: The openBrushograph
 This modification was developed for the **[openBrushograph](https://github.com/openBrushograph/openBrushograph)** project.
@@ -19,34 +19,26 @@ The openBrushograph is a drawing machine where precise control over the brush he
 *   **Source:** [https://git.kompot.si/g1smo/FluidNC](https://git.kompot.si/g1smo/FluidNC)
 
 ## Overview of Changes
-We intercepted the command stream to recognize two new custom characters (`0xB0` and `0xB1`). these triggers calculate the exact number of stepper pulses required for a **0.1mm** move (based on the machine's `steps_per_mm` setting) and inject them into the stepper interrupt loop.
+We intercepted the command stream to recognize four new custom characters (`0xB0` to `0xB3`). These triggers calculate the exact number of stepper pulses required for a move (based on the machine's `steps_per_mm` setting) and inject them into the stepper interrupt loop.
 
 ### 1. New Commands Defined
 **File:** `FluidNC/src/RealtimeCmd.h`
-**Change:** Added two entries to the `Cmd` enum.
+**Change:** Added entries to the `Cmd` enum.
 ```cpp
 enum class Cmd : uint8_t {
     // ...
     BabystepZUp           = 0xB0, // Extended ASCII 176 -> Moves Z +0.1mm
     BabystepZDown         = 0xB1, // Extended ASCII 177 -> Moves Z -0.1mm
+    BabystepZUpFast       = 0xB2, // Extended ASCII 178 -> Moves Z +0.5mm
+    BabystepZDownFast     = 0xB3, // Extended ASCII 179 -> Moves Z -0.5mm
 };
 ```
 
 ### 2. Command Parsing & Step Calculation
 **File:** `FluidNC/src/RealtimeCmd.cpp`
 **Change:**
-1.  Added dispatch cases for `0xB0` and `0xB1`.
-2.  **Logic:** Reads the Z-axis `steps_per_mm` from config, calculates steps for 0.1mm (`round(steps_per_mm * 0.1)`), and passes this integer value to the protocol event.
-
-```cpp
-case Cmd::BabystepZUp: {
-    float steps_mm = config->_axes->_axis[Z_AXIS]->_stepsPerMm;
-    int steps = round(steps_mm * 0.1f);
-    if (steps < 1) steps = 1;
-    protocol_send_event(&babystepEvent, (void*)steps);
-    break;
-}
-```
+1.  Added dispatch cases for `0xB0` - `0xB3`.
+2.  **Logic:** Reads the Z-axis `steps_per_mm` from config, calculates steps (`round(steps_per_mm * dist)`), and passes this integer value to the protocol event.
 
 ### 3. Protocol Event Handling
 **File:** `FluidNC/src/Protocol.cpp`
@@ -61,11 +53,11 @@ Inside `pulse_func()`, after the standard planner block steps are executed, we c
 1.  Force the Z step bit high.
 2.  Set the direction bit based on the accumulator sign.
 3.  Decrement the accumulator.
+4.  **Critical Fix (Unipolar Support):** After hijacking the direction bit for the babystep, we *immediately restore* the `dir_outbits` to their previous state. This ensures that unipolar drivers (like ULN2003), which rely on a stable state variable to sequence their phases, do not get confused or drift when the planner resumes normal motion.
 
-### 5. Bug Fix: Double-Stepping Issue
-**Symptoms:** Machine coordinates and movements were exactly **2x** the expected values.
-**Cause:** A duplicate `config->_axes->step(...)` call was accidentally left in `Stepper.cpp`.
-**Fix:** Removed the duplicate line.
+### 5. HTTP Command Handler
+**File:** `FluidNC/src/WebServer.cpp`
+**Change:** Enabled the `/command` endpoint to accept raw bytes via the `cmd` query parameter. This allows sending `0xB0` characters via HTTP `GET` requests (e.g., `curl "http://fluidnc.local/command?cmd=%B0"`), enabling stateless control interfaces.
 
 ## Installation
 
@@ -88,26 +80,34 @@ If you want to modify the code:
 
 ## How to Use
 
-### 1. General Usage (Serial/Macros)
-To nudge the Z-axis, you must send specific extended ASCII characters to the controller. These bypass the planner and execute immediately.
-
-*   **Move Z UP (+0.1mm):** Send `0xB0` (Extended ASCII 176)
-*   **Move Z DOWN (-0.1mm):** Send `0xB1` (Extended ASCII 177)
-
-**Note:** Most standard serial consoles (Arduino Monitor, etc.) cannot send these raw bytes easily. You need a terminal that supports hex/macros (like CoolTerm, RealTerm) or use the WebUI extension below.
-
-### 2. WebUI Extension (Recommended)
-![Z-Babystep Extension Screenshot](z-babystep/Screenshot_z-babystepper.png)
+### WebUI Extension (Recommended)
+![Install Extension](z-babystep/Screenshot_add_extension.png)
 
 We created a simple "plugin" for the FluidNC WebUI to make this easy to use on your phone or PC.
+**New Version:** `z-babystep-http.html` (Stateless)
 
-1.  **Download:** Get `z-babystep/z-babystep.html` from this repository.
+#### Method A: Install as Panel (Best Integration)
+1.  **Download:** Get `z-babystep/z-babystep-http.html` from this repository.
 2.  **Upload:**
     *   Open your machine's WebUI.
     *   Go to the **Files** tab (Folder icon).
-    *   Upload `z-babystep.html` to the Flash or SD card.
-3.  **Run:**
-    *   Click on `z-babystep.html` in the file list.
-    *   Click the **View** (Eye icon) button.
-4.  **Control:** A dedicated interface will pop up with large "UP" and "DOWN" buttons. Tap them to nudge your brush while drawing!
+    *   Upload `z-babystep-http.html` to the Flash or SD card.
+3.  **Install as Panel:**
+    *   Go to **Settings** (Gear icon) -> **Extra Content**.
+    *   Click **Add Panel**.
+    *   Name it "Z-Babystep" or similar.
+    *   Select `z-babystep-http.html` as the source file.
+    *   Save.
+
+#### Method B: Standalone (Quickest)
+You can also simply **open the file directly in your browser** (drag and drop it, or double click) on any computer/phone connected to the same WiFi network.
+*   Enter your machine's hostname (e.g. `fluidnc.local`) in the input field.
+*   It works immediately without uploading!
+
+#### Usage
+*   Click the new icon in your sidebar/menu to open the panel.
+*   **Up/Down:** Nudges the Z-axis by 0.1mm.
+*   **Wake (Purple):** Nudges the Z-axis AND sends a tiny X-move to wake up the motion planner if the machine is idle.
+    
+![Extension Interface](z-babystep/Screenshot_z-babystep-http.png)
 
