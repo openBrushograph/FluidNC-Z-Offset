@@ -282,6 +282,14 @@ bool IRAM_ATTR Stepper::pulse_func() {
 
     // [ANTI-GRAVITY] BABYSTEP INJECTION
     int32_t z_acc = babystep_accumulator[Z_AXIS];
+
+    // CRITICAL FIX: Restore direction bits to planner state!
+    // If we modified dir_outbits in a previous cycle for a babystep, it persists.
+    // We must reset it to what the current segment expects, so normal steps go the right way.
+    if (st.exec_block) {
+        st.dir_outbits = st.exec_block->direction_bits;
+    }
+
     if (z_acc != 0) {
         // Only step if the planner isn't already stepping Z this cycle
         if (!bitnum_is_true(st.step_outbits, Z_AXIS)) {
@@ -290,11 +298,7 @@ bool IRAM_ATTR Stepper::pulse_func() {
              if (z_acc > 0) {
                  // Standard FluidNC: Clear bit = Positive Direction (usually)
                  // NOTE: This modifies the GLOBAL direction state for the next pulse!
-                 // This is technically unsafe if we don't restore it, but since 
-                 // the planner re-writes `st.dir_outbits` from `st.exec_block->direction_bits`
-                 // at the start of every segment load, it usually corrects itself quickly.
-                 // Ideally we should check `config->invert_mask` vs `z_acc` direction.
-                 // For now, assuming Clear = Positive.
+                 // The "Safety Restore" above handles fixing it for the *next* cycle.
                  clear_bitnum(st.dir_outbits, Z_AXIS); 
                  babystep_accumulator[Z_AXIS]--;
              } else {
