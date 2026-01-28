@@ -101,6 +101,7 @@ void execute_realtime_command(Cmd command, Channel& channel) {
 // ... (cleanup)
         case Cmd::BabystepZUp: {
             float steps_mm = config->_axes->_axis[Z_AXIS]->_stepsPerMm;
+            // Standard: 0.1mm
             int steps = round(steps_mm * 0.1f);
             if (steps < 1) steps = 1;
             protocol_send_event(&babystepEvent, (void*)steps);
@@ -108,13 +109,29 @@ void execute_realtime_command(Cmd command, Channel& channel) {
         }
         case Cmd::BabystepZDown: {
             float steps_mm = config->_axes->_axis[Z_AXIS]->_stepsPerMm;
+            // Standard: 0.1mm
             int steps = round(steps_mm * 0.1f);
             if (steps < 1) steps = 1;
-
             // Note: Protocol handler casts to int, so -steps is correct for direction
             protocol_send_event(&babystepEvent, (void*)-steps);
             break;
         }
+        case Cmd::BabystepZUpFast: {
+             float steps_mm = config->_axes->_axis[Z_AXIS]->_stepsPerMm;
+             // Fast: 0.5mm
+             int steps = round(steps_mm * 0.5f);
+             if (steps < 1) steps = 1;
+             protocol_send_event(&babystepEvent, (void*)steps);
+             break;
+         }
+         case Cmd::BabystepZDownFast: {
+             float steps_mm = config->_axes->_axis[Z_AXIS]->_stepsPerMm;
+             // Fast: 0.5mm
+             int steps = round(steps_mm * 0.5f);
+             if (steps < 1) steps = 1;
+             protocol_send_event(&babystepEvent, (void*)-steps);
+             break;
+         }
         default:
             break;
     }

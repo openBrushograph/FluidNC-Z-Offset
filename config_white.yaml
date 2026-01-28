@@ -6,12 +6,13 @@ stepping:
   dir_delay_us: 1
   pulse_us: 8
   disable_delay_us: 0
+  
 axes:
   shared_stepper_disable_pin: NO_PIN
   x:
-    steps_per_mm: 85
-    max_rate_mm_per_min: 1000
-    acceleration_mm_per_sec2: 50
+    steps_per_mm: 93
+    max_rate_mm_per_min: 1600
+    acceleration_mm_per_sec2: 80
     max_travel_mm: 200
     motor0:
       unipolar:
@@ -23,9 +24,9 @@ axes:
       limit_pos_pin: NO_PIN
       limit_all_pin: NO_PIN
   y:
-    steps_per_mm: 85
-    max_rate_mm_per_min: 1000
-    acceleration_mm_per_sec2: 50
+    steps_per_mm: 93
+    max_rate_mm_per_min: 1600
+    acceleration_mm_per_sec2: 80
     max_travel_mm: 200
     motor0:
       unipolar:
@@ -38,8 +39,8 @@ axes:
       limit_all_pin: NO_PIN
   z:
     steps_per_mm: 106
-    max_rate_mm_per_min: 300
-    acceleration_mm_per_sec2: 30
+    max_rate_mm_per_min: 1000
+    acceleration_mm_per_sec2: 40
     max_travel_mm: 100
     motor0:
       unipolar:
@@ -50,10 +51,17 @@ axes:
       limit_neg_pin: NO_PIN
       limit_pos_pin: NO_PIN
       limit_all_pin: NO_PIN
+      
+macros:
+  startup_line0: G10 P0 L20 X0.000 Y0.000 Z0.000
+  macro0: 
+  macro1: 
+  macro2: 
+  after_reset:
 
 spi:
-  miso_pin: gpio.19
-  mosi_pin: gpio.23
+  miso_pin: gpio.23
+  mosi_pin: gpio.19
   sck_pin: gpio.18
 sdcard:
   card_detect_pin: no_pin

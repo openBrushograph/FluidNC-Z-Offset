@@ -46,6 +46,8 @@ enum class Cmd : uint8_t {
     CoolantMistOvrToggle  = 0xA1,
     BabystepZUp           = 0xB0,
     BabystepZDown         = 0xB1,
+    BabystepZUpFast       = 0xB2,
+    BabystepZDownFast     = 0xB3,
     // Channel Extender uses the Bx range; see Channel.h
 };
 
